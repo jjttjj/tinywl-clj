@@ -12,7 +12,6 @@
             wl_notify_func_t$Function
             wl_signal
             wlr_backend
-            wlr_backend
             wlr_backend$events
             wlr_box
             wlr_cursor
@@ -28,7 +27,6 @@
             wlr_output_layout
             wlr_output_state
             wlr_pointer
-            wlr_pointer_button_event
             wlr_pointer_button_event
             wlr_pointer_motion_absolute_event
             wlr_pointer_motion_event
@@ -57,7 +55,6 @@
             MemoryLayout
             MemorySegment
             SegmentAllocator
-            ValueLayout
             ValueLayout
             ValueLayout$OfDouble
             ValueLayout$OfInt]))
