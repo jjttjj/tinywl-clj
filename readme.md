@@ -2,7 +2,7 @@
 
 A Clojure port of [tinywl](https://gitlab.freedesktop.org/wlroots/wlroots/-/tree/master/tinywl), a minimal viable Wayland compositor using the [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots/) library.
 
-Uses Java 22's java.lang.foreign library (aka [Project Panama](https://openjdk.org/projects/panama/) to interop with wlroots and other C libraries from Clojure.
+Uses Java 22's java.lang.foreign library (aka [Project Panama](https://openjdk.org/projects/panama/)) to interop with wlroots and other C libraries from Clojure.
 
 Java bindings were generated using [jextract](https://github.com/openjdk/jextract).
 
