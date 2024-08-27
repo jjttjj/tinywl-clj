@@ -269,66 +269,65 @@
 #_(s/def ::window (s/keys :req [::toplevel ::scene-tree]))
 
 
-(defn on-new-xdg-surface [{:keys [::arena ::scene ::windows] :as ctx} xrfc]
-  (let [role (wlr_xdg_surface/role xrfc)]
-    (cond
-      (= role (C/WLR_XDG_SURFACE_ROLE_POPUP))
-      (log/warn "popup not supported")
+(defn on-new-xdg-toplevel [{:keys [::arena ::scene ::windows] :as ctx} toplevel]
+  (let [xrfc  (wlr_xdg_toplevel/base toplevel)
+        srfc (wlr_xdg_surface/surface xrfc)
+        xrfc-events (wlr_xdg_surface/events xrfc)
+        top-events  (wlr_xdg_toplevel/events toplevel)
+        srfc-events (wlr_surface/events srfc)
 
-      (= role (C/WLR_XDG_SURFACE_ROLE_TOPLEVEL))
-      (let [toplevel (wlr_xdg_surface/toplevel xrfc) ;;this is xdg_toplevel
-            surface (wlr_xdg_surface/surface xrfc) ;;this surface is a wlr_surface not xdg one
+        scene-tree
+        (C/wlr_scene_xdg_surface_create
+          (wlr_scene/tree scene)
+          (wlr_xdg_toplevel/base toplevel))
+        window {::toplevel   toplevel
+                ::scene-tree scene-tree}]
 
-            xrfc-events (wlr_xdg_surface/events xrfc)
-            top-events (wlr_xdg_toplevel/events toplevel)
-            srfc-events (wlr_surface/events surface)
-
-            scene-tree
-            (C/wlr_scene_xdg_surface_create
-              (wlr_scene/tree scene)
-              (wlr_xdg_toplevel/base toplevel))
-            window {::toplevel   toplevel
-                    ::scene-tree scene-tree}]
-
-        (-> (wlr_scene_tree/node scene-tree)
-            ;;set a pointer value:
-            (wlr_scene_node/data (.reinterpret toplevel 0)
-              ;; or this works too (???)
-              #_(.asSlice toplevel 0 0)))
-        (wlr_xdg_surface/data xrfc (.reinterpret scene-tree 0))
+    (-> (wlr_scene_tree/node scene-tree)
+        ;;set a pointer value:
+        (wlr_scene_node/data (.reinterpret toplevel 0)
+          ;; or this works too (???)
+          #_(.asSlice toplevel 0 0)))
+    (wlr_xdg_surface/data xrfc (.reinterpret scene-tree 0))
 
 
-        (add-listener (assoc ctx ::window window)
-          (wlr_xdg_toplevel$events/request_move top-events)
-          on-request-move)
-        (add-listener (assoc ctx ::window window)
-          (wlr_xdg_toplevel$events/request_resize top-events)
-          on-request-resize)
+    (add-listener (assoc ctx ::window window)
+      (wlr_xdg_toplevel$events/request_move top-events)
+      on-request-move)
+    (add-listener (assoc ctx ::window window)
+      (wlr_xdg_toplevel$events/request_resize top-events)
+      on-request-resize)
 
-        (add-listener ctx
-          (wlr_surface$events/map srfc-events)
-          (fn [{:keys [::seat ::state] :as ctx} _data]
-            (swap! windows conj window)
-            (focus-toplevel ctx window surface)))
 
-        (add-listener ctx
-          (wlr_surface$events/unmap srfc-events)
-          (fn [ctx data]
-            (swap! windows (fn [wins] (remove #{window} wins)))
-            (reset-cursor-mode ctx)))
+    (add-listener ctx
+      (wlr_surface$events/commit srfc-events)
+      (fn [{:keys [::seat ::state] :as ctx} _data]
+        (if (log/spy (wlr_xdg_surface/initial_commit xrfc))
+          (C/wlr_xdg_toplevel_set_size toplevel 0 0))))
 
-        (add-listener ctx
-          (wlr_xdg_surface$events/destroy xrfc-events)
-          (fn [ctx data] (log/debug "toplevel destroyed")))
+    (add-listener ctx
+      (wlr_surface$events/map srfc-events)
+      (fn [{:keys [::seat ::state] :as ctx} _data]
+        (swap! windows conj window)
+        (focus-toplevel ctx window srfc)))
 
-        (add-listener (assoc ctx ::window window)
-          (wlr_xdg_toplevel$events/request_maximize top-events)
-          on-request-maximize)
-        (add-listener ctx
-          (wlr_xdg_toplevel$events/request_minimize top-events)
-          on-request-minimize))
+    (add-listener ctx
+      (wlr_surface$events/unmap srfc-events)
+      (fn [ctx data]
+        (swap! windows (fn [wins] (remove #{window} wins)))
+        (reset-cursor-mode ctx)))
 
-      :else (log/warn "unrecognized role" role))))
+    (add-listener ctx
+      (wlr_xdg_toplevel$events/destroy top-events)
+      (fn [ctx data]
+        (log/debug "toplevel destroyed")))
+
+    (add-listener (assoc ctx ::window window)
+      (wlr_xdg_toplevel$events/request_maximize top-events)
+      on-request-maximize)
+    (add-listener ctx
+      (wlr_xdg_toplevel$events/request_minimize top-events)
+      on-request-minimize)))
 
 
 (defn deref-ptr [seg]
@@ -437,7 +436,7 @@
                   [tree data]
                   (loop [tree (wlr_scene_node/parent node)]
                     (let [parent (wlr_scene_node/parent tree)
-                          ;; data here is what we set in on-new-xdg-surface
+                          ;; data here is what we set in on-new-xdg-toplevel
                           data   (-> (wlr_scene_tree/node tree)
                                      wlr_scene_node/data)]
                       (if (or (null-ptr? parent)
@@ -529,14 +528,14 @@
   (let [arena         (Arena/ofShared)
         auto-arena    (Arena/ofAuto)
         disp          (C/wl_display_create)
-        bak           (C/wlr_backend_autocreate disp MemorySegment/NULL)
+        bak           (C/wlr_backend_autocreate (C/wl_display_get_event_loop disp) MemorySegment/NULL)
         _             (when (null-ptr? bak) (throw (ex-info "failed to create wlr_backend" {})))
         rend          (doto (C/wlr_renderer_autocreate bak)
                         (C/wlr_renderer_init_wl_display disp))
         _             (when (null-ptr? rend) (throw (ex-info "failed to create wlr_renderer" {})))
         alloc         (C/wlr_allocator_autocreate bak rend)
         _             (when (null-ptr? alloc) (throw (ex-info "failed to create wlr_allocator" {})))
-        output-layout (C/wlr_output_layout_create)
+        output-layout (C/wlr_output_layout_create disp)
         scene         (C/wlr_scene_create)
         scene-layout  (C/wlr_scene_attach_output_layout scene output-layout)
         xdg-shell     (C/wlr_xdg_shell_create disp 3)
@@ -590,8 +589,12 @@
     (C/wlr_subcompositor_create disp)
     (C/wlr_data_device_manager_create disp)
 
-    (add-listener ctx (wlr_xdg_shell$events/new_surface (wlr_xdg_shell/events xdg-shell))
-      on-new-xdg-surface)
+    (add-listener ctx (wlr_xdg_shell$events/new_toplevel (wlr_xdg_shell/events xdg-shell))
+      on-new-xdg-toplevel)
+
+    (add-listener ctx (wlr_xdg_shell$events/new_popup (wlr_xdg_shell/events xdg-shell))
+      (fn [ctx _] (println "new popup")))
+
     ctx))
 
 (defn display-run [{:keys [::display ::scene ::output-layout ::cursor-mgr]}]
@@ -600,9 +603,22 @@
   (C/wl_display_destroy_clients display)
   (C/wlr_scene_node_destroy (-> scene wlr_scene/tree wlr_scene_tree/node))
   (C/wlr_xcursor_manager_destroy cursor-mgr)
-  (C/wlr_output_layout_destroy output-layout)
   (C/wl_display_destroy display))
 
+
+(defn start [{:keys [spawn-args]}]
+  (let [{:keys [::arena ::backend] :as srv} (init-server)]
+    (with-open [^Arena arena arena]
+      (try
+        (when-not (null-ptr? (C/wlr_backend_start backend))
+          (when spawn-args
+            (future
+              (apply p/exec
+                {:env {"WAYLAND_DISPLAY" (::socket srv)}}
+                spawn-args)))
+          (display-run srv))
+        (catch Throwable t
+          (log/error t))))))
 
 (defn -main [& [sflag & args]]
   ;;; va_args isn't well supported so we pass NULL here to use their default logger
@@ -611,20 +627,10 @@
   (when sflag
     (or (= sflag "-s") (throw (ex-info (str "`-s` is the only supported flag") {:args args})))
     (or (seq args) (throw (ex-info "No arguments passed to -s" {:args args}))))
-  (let [{:keys [::arena ::backend] :as srv} (init-server)]
-    (future
-      (with-open [^Arena arena arena]
-        (try
-          (when-not (null-ptr? (C/wlr_backend_start backend))
-            (when sflag
-              (future
-                (apply p/exec
-                  {:env {"WAYLAND_DISPLAY" (::socket srv)}}
-                  args)))
-            (display-run srv))
-          (catch Throwable t
-            (log/error t)))))))
+
+  (start {:spawn-args args})
+  (System/exit 0))
 
 (comment
-  (-main "-s" "foot")
+  (start {:spawn-args "foot"})
   )
