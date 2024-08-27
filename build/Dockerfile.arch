@@ -1,0 +1,27 @@
+FROM archlinux:latest
+
+RUN pacman -Syu --noconfirm \
+    jdk-openjdk \
+    clojure \
+    wlroots \
+    git \
+    curl \
+    wget \
+    foot \
+    fontconfig \
+    ttf-dejavu \
+    glibc \
+    gcc \
+    && pacman -Scc --noconfirm
+
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+WORKDIR /app
+
+COPY . /app
+
+RUN clojure -X:deps prep
+
+RUN clojure -X:build build
+
+CMD ["echo", "Please provide an entrypoint when running this container."]

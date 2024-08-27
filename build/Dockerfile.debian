@@ -1,0 +1,32 @@
+FROM debian:sid
+
+RUN echo "deb http://deb.debian.org/debian experimental main" > /etc/apt/sources.list.d/experimental.list
+
+# Install required packages
+RUN apt-get update && apt-get install -y \
+    openjdk-22-jdk \
+    git \
+    curl \
+    wget \
+    foot \
+    fontconfig \
+    fonts-dejavu \
+    libc6 \
+    wayland-protocols \
+    gcc \
+    libwlroots-0.18-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -L -O https://github.com/clojure/brew-install/releases/latest/download/linux-install.sh
+RUN chmod +x linux-install.sh
+RUN ./linux-install.sh
+
+WORKDIR /app
+COPY . /app
+
+RUN clojure -X:deps prep
+
+RUN clojure -X:build build/build
+
+CMD ["echo", "Please provide an entrypoint when running this container."]

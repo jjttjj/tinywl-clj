@@ -5,16 +5,27 @@
 
  :aliases
  {:build
-  {:replace-deps
-   {io.github.clojure/tools.build {:git/tag "v0.10.5" :git/sha "2a21b7a"}
-    org.clojure/tools.gitlibs     {:mvn/version "2.5.197"}}
-   :ns-default build}
+  {:extra-paths ["build"]
+   :ns-default build
+   :replace-deps
+   {org.clojure/clojure           {:mvn/version "1.12.0-rc1"}
+    org.clojure/tools.gitlibs     {:mvn/version "2.5.197"}
+    io.github.clojure/tools.build {:git/tag "v0.10.5" :git/sha "2a21b7a"}
+    babashka/fs                   {:mvn/version "0.5.22"}
+    org.bytedeco/llvm-platform    {:mvn/version "13.0.1-1.5.7"}}}
+
+  :podman
+  {:extra-paths ["build"]
+   :ns-default podman
+   :replace-deps
+   {org.clojure/clojure           {:mvn/version "1.12.0-rc1"}
+    io.github.clojure/tools.build {:git/tag "v0.10.5" :git/sha "2a21b7a"}
+    babashka/fs                   {:mvn/version "0.5.22"}}}
 
   :dev
   {:extra-paths ["dev"]
    :extra-deps
-   {io.github.clojure/tools.build       {:git/tag "v0.10.5" :git/sha "2a21b7a"}
-    org.apache.logging.log4j/log4j-core {:mvn/version "2.23.1"}
+   {org.apache.logging.log4j/log4j-core {:mvn/version "2.23.1"}
     org.apache.logging.log4j/log4j-api  {:mvn/version "2.23.1"}}
-   :jvm-opts ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory"
-              "--enable-native-access=ALL-UNNAMED"]}}}
+   :jvm-opts    ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory"
+                 "--enable-native-access=ALL-UNNAMED"]}}}

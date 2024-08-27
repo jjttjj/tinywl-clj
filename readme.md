@@ -29,10 +29,21 @@ To use from within a container you will need to allow your container to access y
 git clone https://github.com/jjttjj/tinywl-clj
 cd tinywl-clj
 podman build -t tinywl-clj-arch .
-podman run --security-opt label=disable -e XDG_RUNTIME_DIR=/tmp -e "WAYLAND_DISPLAY=$WAYLAND_DISPLAY" -v "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY:ro" --ipc host -it tinywl-clj-arch
+podman run --rm --security-opt label=disable -e XDG_RUNTIME_DIR=/tmp -e "WAYLAND_DISPLAY=$WAYLAND_DISPLAY" -v "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY:ro" --ipc host -it tinywl-clj-arch
 
 ```
 
+
+The `:podman` alias also offers some helper commands for this
+```
+# arch
+clj -X:podman build :file '"build/Dockerfile.arch"' :tag '"tinywl-clj:arch"'
+clj -X:podman run :tag '"tinywl-clj:arch"'
+
+# debain
+clj -X:podman build :file '"build/Dockerfile.debian"' :tag '"tinywl-clj:debian"'
+clj -X:podman run :tag '"tinywl-clj:debian"'
+```
 
 ## Native usage
 
