@@ -82,8 +82,7 @@
                                (str fs/path-separator)))
         env      {lib-var lib-path}]
     (-> (b/java-command
-          {:cp        [#_(.getPath (io/resource "jextract.jar")) ;;TODO
-                       jar-file]
+          {:cp        [jar-file]
            :main      "org.openjdk.jextract.JextractTool"
            :basis     {}
            :main-args jextract-args})

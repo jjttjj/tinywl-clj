@@ -31,7 +31,7 @@
 
         "--entrypoint" "clojure"
         tag
-        "-M" "--report" "stderr" "-m" "dev.jt.tinywl-clj" "-s" "foot"]})))
+        "-M:dev" "--report" "stderr" "-m" "dev.jt.tinywl-clj" "-s" "foot"]})))
 
 (comment
   (build {:file "build/Dockerfile.arch"

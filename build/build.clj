@@ -40,7 +40,8 @@
            (take-while #(not= % "End of search list."))
            (map str/trim))))
 
-(defn build [& {:keys [extra-includes] :as opts}]
+(defn build [& {:as opts}]
+  (clean opts)
   (let [tmpdir   (fs/create-temp-dir {:prefix "tinywl-clj-build"})
         incdir   (str (doto (fs/file tmpdir "includes") fs/create-dirs))]
 
@@ -97,8 +98,6 @@
 
 (comment
   (system-includes)
-
-  (clean)
 
   (build)
   )
