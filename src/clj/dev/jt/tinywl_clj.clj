@@ -597,12 +597,16 @@
 
     ctx))
 
-(defn display-run [{:keys [::display ::scene ::output-layout ::cursor-mgr]}]
+(defn display-run [{:keys [::display ::scene ::output-layout ::cursor-mgr
+                           ::cursor ::renderer ::backend]}]
   (C/wl_display_run display)
 
   (C/wl_display_destroy_clients display)
   (C/wlr_scene_node_destroy (-> scene wlr_scene/tree wlr_scene_tree/node))
   (C/wlr_xcursor_manager_destroy cursor-mgr)
+  (C/wlr_cursor_destroy cursor)
+  (C/wlr_renderer_destroy renderer)
+  (C/wlr_backend_destroy backend)
   (C/wl_display_destroy display))
 
 
