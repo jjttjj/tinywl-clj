@@ -269,7 +269,7 @@
 #_(s/def ::window (s/keys :req [::toplevel ::scene-tree]))
 
 
-(defn on-new-xdg-toplevel [{:keys [::arena ::scene ::windows] :as ctx} toplevel]
+(defn on-new-xdg-toplevel [{:keys [::arena ::scene ::windows] :as ctx} ^MemorySegment toplevel]
   (let [xrfc  (wlr_xdg_toplevel/base toplevel)
         srfc (wlr_xdg_surface/surface xrfc)
         xrfc-events (wlr_xdg_surface/events xrfc)
@@ -302,7 +302,7 @@
     (add-listener ctx
       (wlr_surface$events/commit srfc-events)
       (fn [{:keys [::seat ::state] :as ctx} _data]
-        (if (log/spy (wlr_xdg_surface/initial_commit xrfc))
+        (if (wlr_xdg_surface/initial_commit xrfc)
           (C/wlr_xdg_toplevel_set_size toplevel 0 0))))
 
     (add-listener ctx
@@ -497,7 +497,8 @@
     (wlr_pointer_button_event/button event)
     (wlr_pointer_button_event/state event))
   (let [{:keys [:?window :?surface]} (desktop-window-at ctx (wlr_cursor/x cursor) (wlr_cursor/y cursor))]
-    (if (= (C/WLR_BUTTON_RELEASED) (wlr_pointer_button_event/state event))
+    (if (= (wlr_pointer_button_event/state event)
+           (C/WL_POINTER_BUTTON_STATE_RELEASED))
       (reset-cursor-mode ctx)
       (focus-toplevel ctx ?window ?surface))))
 
@@ -593,7 +594,7 @@
       on-new-xdg-toplevel)
 
     (add-listener ctx (wlr_xdg_shell$events/new_popup (wlr_xdg_shell/events xdg-shell))
-      (fn [ctx _] (println "new popup")))
+      (fn [ctx _] (log/debug "new popup")))
 
     ctx))
 
@@ -636,5 +637,5 @@
   (System/exit 0))
 
 (comment
-  (start {:spawn-args "foot"})
+  (start {:spawn-args ["foot"]})
   )
